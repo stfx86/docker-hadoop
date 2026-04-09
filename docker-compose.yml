@@ -1,5 +1,4 @@
 version: "3"
-
 services:
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
@@ -25,7 +24,7 @@ services:
       SERVICE_PRECONDITION: "namenode:9870"
     env_file:
       - ./hadoop.env
-  
+
   resourcemanager:
     image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
     container_name: resourcemanager
@@ -43,7 +42,7 @@ services:
       SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
     env_file:
       - ./hadoop.env
-  
+
   historyserver:
     image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
     container_name: historyserver
@@ -54,8 +53,45 @@ services:
       - hadoop_historyserver:/hadoop/yarn/timeline
     env_file:
       - ./hadoop.env
-  
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    profiles: ["db"]                   # 👈 optional, only starts with --profile db
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: sqoop
+      MYSQL_PASSWORD: sqoop
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+  sqoop:
+    image: dvoros/sqoop:latest
+    container_name: sqoop
+    restart: always
+    profiles: ["db"]                   # 👈 optional, only starts with --profile db
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 resourcemanager:8088 mysql:3306"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      namenode:
+        condition: service_started
+      resourcemanager:
+        condition: service_started
+    env_file:
+      - ./hadoop.env
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
   hadoop_historyserver:
+  mysql_data:
