@@ -75,6 +75,7 @@ services:
 
   sqoop:
     image: dvoros/sqoop:latest
+    mem_limit: 300m
     container_name: sqoop
     restart: always
     profiles: ["db"]                   # 👈 optional, only starts with --profile db
